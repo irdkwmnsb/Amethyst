@@ -84,14 +84,28 @@ export class Player extends EventEmitter<{
     // Play the first track by default
     if (!this.currentTrack.value) {
       // Find the first non-errored track
-      const track = this.queue.curList.value.find(track => !track.hasErrored);
-      track && this.setPlayingTrack(track);
+      this.setPlayingTrack(this.getFirstTrack()!);
     }
     this.input.play();
     this.isPlaying.value = true;
     this.isPaused.value = false;
     this.isStopped.value = false;
     this.emit("play", this.getCurrentTrack()!);
+  }
+
+  /**
+   * Returns the next non-errored track
+   * @param start The index to start searching from, defaults to the current track index
+   * @returns The next non-errored track
+   */
+  private getNextNonErroredTrack(start?: number): Track | undefined {
+    const curList = this.queue.curList.value;
+    const startIndex = start ?? this.currentTrackIndex.value;
+    while (curList[startIndex + 1]) {
+      const track = curList[startIndex + 1];
+      if (!track.hasErrored) return track;
+    }
+    return undefined;
   }
 
   public pause() {
@@ -132,10 +146,7 @@ export class Player extends EventEmitter<{
   * Should be called when the user skips a track
   */
   public skip() {
-    console.log("Current track index: ", this.currentTrackIndex.value);
-    const curList = this.queue.curList.value;
-    const nextTrack: Track = curList[this.currentTrackIndex.value + 1];
-    console.log("Next track: ", nextTrack);
+    const nextTrack = this.getNextNonErroredTrack();
 
     // Check if we reached the end of the queue
     if (nextTrack === undefined) {
@@ -164,7 +175,7 @@ export class Player extends EventEmitter<{
   }
 
   private getFirstTrack() {
-    return this.queue.curList.value[0];
+    return this.getNextNonErroredTrack(-1);
   }
 
   public seekTo(time: number) {
